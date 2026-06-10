@@ -7,7 +7,7 @@ function App() {
   const [idInModifica, setIdInModifica] = useState(null);
   const [testoModificato, setTestoModificato] = useState('');
 
-  // 1. GET: Carica le attività
+  // GET: Carica attività
   useEffect(() => {
     fetch('http://localhost:5000/api/attivita')
       .then(risposta => risposta.json())
@@ -15,7 +15,7 @@ function App() {
       .catch(errore => console.error("Errore nel caricamento:", errore));
   }, []);
 
-  // 2. POST: Aggiunge una nuova attività
+  // POST: Crea nuova attività
   const gestisciInvio = (e) => {
     e.preventDefault();
     if (!nuovoTesto.trim()) return;
@@ -33,7 +33,7 @@ function App() {
     .catch(errore => console.error("Errore nell'invio:", errore));
   };
 
-  // 3. PUT: Salva la modifica
+  // PUT: Salva la modifica
   const salvaModifica = (id) => {
     if (!testoModificato.trim()) return;
 
@@ -48,6 +48,20 @@ function App() {
       setIdInModifica(null);
     })
     .catch(errore => console.error("Errore nella modifica:", errore));
+  };
+
+  const eliminaAttivita = (id) => {
+    const conferma = window.confirm("Sei sicuro di voler eliminare questa attività?");
+    if (!conferma) return;
+
+    fetch(`http://localhost:5000/api/attivita/${id}`, {
+      method: 'DELETE',
+    })
+    .then(risposta => risposta.json())
+    .then(listaAggiornata => {
+      setAttivita(listaAggiornata); 
+    })
+    .catch(errore => console.error("Errore nell'eliminazione:", errore));
   };
 
   const formattaData = (dataStringa) => {
@@ -94,15 +108,26 @@ function App() {
                       Creato: {formattaData(item.createdAt)} | Modificato: {formattaData(item.updatedAt)}
                     </div>
                   </div>
-                  <button 
-                    onClick={() => {
-                      setIdInModifica(item.id);
-                      setTestoModificato(item.testo);
-                    }} 
-                    className="btn-edit"
-                  >
-                    Modifica
-                  </button>
+                  
+                  <div style={{ display: 'flex' }}>
+                    <button 
+                      onClick={() => {
+                        setIdInModifica(item.id);
+                        setTestoModificato(item.testo);
+                      }} 
+                      className="btn-edit"
+                    >
+                      Modifica
+                    </button>
+                    
+                    <button 
+                      onClick={() => eliminaAttivita(item.id)} 
+                      className="btn-delete"
+                    >
+                      Elimina
+                    </button>
+                  </div>
+
                 </div>
               )}
             </li>
