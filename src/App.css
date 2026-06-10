@@ -1,0 +1,33 @@
+.app-container {
+  text-align: center;
+  margin-top: 50px;
+}
+
+.app-title { color: #61dafb; margin-bottom: 20px; }
+.todo-form { margin-bottom: 30px; }
+.input-create { padding: 10px; width: 250px; border-radius: 5px 0 0 5px; border: 1px solid #ccc; outline: none; }
+.btn-create { padding: 10px 20px; background-color: #61dafb; border: 1px solid #61dafb; border-radius: 0 5px 5px 0; cursor: pointer; font-weight: bold; color: #333;}
+
+.list-container { display: inline-block; text-align: left; min-width: 450px; }
+.todo-list { list-style-type: none; padding: 0; }
+.todo-item { 
+  padding: 15px; 
+  background-color: #fff;
+  margin-bottom: 10px; 
+  border-radius: 5px; 
+  border-left: 5px solid #61dafb; 
+  display: flex; 
+  justify-content: space-between; 
+  align-items: center; 
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.edit-container { display: flex; gap: 10px; width: 100%; }
+.input-edit { padding: 5px; flex-grow: 1; border: 1px solid #ccc; border-radius: 3px; }
+.btn-save { background-color: #28a745; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer; }
+.btn-cancel { background-color: #dc3545; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer; }
+
+.view-container { display: flex; justify-content: space-between; width: 100%; align-items: center; }
+.todo-text { font-weight: bold; font-size: 16px; }
+.todo-dates { font-size: 11px; color: #888; margin-top: 5px; }
+.btn-edit { background-color: #ffc107; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer; font-weight: bold;}
