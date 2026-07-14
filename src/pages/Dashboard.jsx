@@ -10,12 +10,10 @@ import {
 } from "react-icons/fa";
 import { Navbar } from "@/components/Navbar";
 
-// Componenti shadcn di base
+// Componenti shadcn
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
-
-// Nuovi componenti shadcn per UI avanzata
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   AlertDialog,
@@ -27,16 +25,26 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 
 export default function Dashboard({ token, onLogout }) {
   const [film, setFilm] = useState([]);
   const [nuovoTesto, setNuovoTesto] = useState("");
-  const [nuovaCopertina, setNuovaCopertina] = useState("");
+  // Modificato: non più una stringa di testo, ma uno stato pronto ad accogliere un file
+  const [fileCopertina, setFileCopertina] = useState(null);
 
   const [idInModifica, setIdInModifica] = useState(null);
   const [testoModificato, setTestoModificato] = useState("");
 
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [idDaEliminare, setIdDaEliminare] = useState(null);
   const [viewMode, setViewMode] = useState("list");
 
@@ -66,19 +74,27 @@ export default function Dashboard({ token, onLogout }) {
   const gestisciInvio = (e) => {
     e.preventDefault();
     if (!nuovoTesto.trim()) return;
+
+    // Creiamo un pacchetto speciale (FormData) in grado di trasportare file fisici
+    const formData = new FormData();
+    formData.append("testo", nuovoTesto);
+    if (fileCopertina) {
+      formData.append("copertina", fileCopertina);
+    }
+
     fetch("http://localhost:5000/api/film", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({ testo: nuovoTesto, copertina: nuovaCopertina }),
+      // ATTENZIONE: Quando si usa FormData, NON bisogna mettere il Content-Type.
+      // Il browser capisce da solo che è un file e imposta i parametri corretti!
+      headers: { Authorization: `Bearer ${token}` },
+      body: formData,
     })
       .then((res) => res.json())
       .then((lista) => {
         if (Array.isArray(lista)) setFilm(lista);
         setNuovoTesto("");
-        setNuovaCopertina("");
+        setFileCopertina(null); // Svuota il file dopo il salvataggio
+        setIsAddModalOpen(false);
       })
       .catch(console.error);
   };
@@ -121,44 +137,52 @@ export default function Dashboard({ token, onLogout }) {
 
       <main className="flex-1 p-6">
         <div className="mx-auto max-w-5xl space-y-8">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">I tuoi Film</h1>
-            <p className="text-muted-foreground mt-1">
-              Gestisci e organizza la tua lista in modo semplice.
-            </p>
-          </div>
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4">
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight">I tuoi Film</h1>
+              <p className="text-muted-foreground mt-1">
+                Gestisci e organizza la tua lista in modo semplice.
+              </p>
+            </div>
 
-          <Card className="border-border shadow-sm">
-            <CardContent className="p-4">
-              <form
-                onSubmit={gestisciInvio}
-                className="flex flex-col md:flex-row gap-4 items-start md:items-center"
-              >
-                <div className="flex-1 w-full space-y-3">
+            <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
+              <DialogTrigger asChild>
+                <Button size="lg" className="shadow-sm">
+                  <FaPlus className="mr-2 h-4 w-4" /> Aggiungi Film
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-[425px]">
+                <DialogHeader>
+                  <DialogTitle>Aggiungi alla lista</DialogTitle>
+                  <DialogDescription>
+                    Inserisci il titolo e carica una copertina dal tuo computer.
+                  </DialogDescription>
+                </DialogHeader>
+                <form
+                  onSubmit={gestisciInvio}
+                  className="flex flex-col gap-4 mt-4"
+                >
                   <Input
                     value={nuovoTesto}
                     onChange={(e) => setNuovoTesto(e.target.value)}
                     placeholder="Titolo del film o serie..."
-                    className="bg-background"
+                    autoFocus
                   />
+                  {/* Nuovo input di tipo file! */}
                   <Input
-                    value={nuovaCopertina}
-                    onChange={(e) => setNuovaCopertina(e.target.value)}
-                    placeholder="Incolla qui l'URL dell'immagine di copertina..."
-                    className="bg-background"
+                    type="file"
+                    accept="image/*" // Permette di selezionare solo file immagine
+                    onChange={(e) => setFileCopertina(e.target.files[0])}
+                    className="cursor-pointer file:mr-4 file:py-1 file:px-3 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
                   />
-                </div>
-                <Button
-                  type="submit"
-                  className="shrink-0 w-full md:w-auto h-full min-h-[50px]"
-                >
-                  <FaPlus className="mr-2 h-4 w-4" /> Aggiungi
-                </Button>
-              </form>
-            </CardContent>
-          </Card>
+                  <Button type="submit" className="w-full mt-2">
+                    Salva Film
+                  </Button>
+                </form>
+              </DialogContent>
+            </Dialog>
+          </div>
 
-          {/* Nuovo interruttore Tabs per Lista/Griglia */}
           <div className="flex justify-end items-center mb-4">
             <Tabs
               value={viewMode}
@@ -178,7 +202,7 @@ export default function Dashboard({ token, onLogout }) {
 
           {filmList.length === 0 ? (
             <div className="p-8 text-center text-muted-foreground border bg-background rounded-md shadow-sm">
-              Nessun elemento presente. Inizia ad aggiungere qualcosa!
+              Nessun elemento presente. Clicca su "Aggiungi Film" per iniziare!
             </div>
           ) : viewMode === "list" ? (
             <div className="rounded-md border bg-background shadow-sm">
@@ -345,7 +369,6 @@ export default function Dashboard({ token, onLogout }) {
         </div>
       </main>
 
-      {/* Nuova Finestra di Eliminazione (AlertDialog di shadcn) */}
       <AlertDialog open={isModalOpen} onOpenChange={setIsModalOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
