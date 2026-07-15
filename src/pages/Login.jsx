@@ -8,7 +8,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 
 export default function Login({ onLoginSuccess }) {
   const [isLoginMode, setIsLoginMode] = useState(true);
-  const [username, setUsername] = useState("");
+  // Sostituito username con email
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
@@ -16,8 +17,9 @@ export default function Login({ onLoginSuccess }) {
 
   const handleAuth = (e) => {
     e.preventDefault();
-    if (!username.trim() || !password.trim()) {
-      setAuthMessage("Inserisci username e password!");
+    if (!email.trim() || !password.trim()) {
+      // Aggiornato il messaggio di avviso
+      setAuthMessage("Inserisci email e password!");
       setIsAuthModalOpen(true);
       return;
     }
@@ -27,7 +29,8 @@ export default function Login({ onLoginSuccess }) {
     fetch(endpoint, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username, password }),
+      // Inviamo l'email al server invece dell'username
+      body: JSON.stringify({ email, password }),
     })
       .then(async (risposta) => {
         const dati = await risposta.json().catch(() => ({})); 
@@ -45,7 +48,6 @@ export default function Login({ onLoginSuccess }) {
       .then((dati) => {
         if (dati.token) {
           localStorage.setItem("token", dati.token);
-          // Invece di usare setToken qui, avvisiamo App.jsx che il login è andato a buon fine!
           onLoginSuccess(dati.token); 
         } else if (!isLoginMode) {
           setAuthMessage("Registrazione completata!");
@@ -71,8 +73,9 @@ export default function Login({ onLoginSuccess }) {
         <CardContent>
           <form onSubmit={handleAuth} className="grid gap-4">
             <div className="grid gap-2">
-              <Label htmlFor="username">Username</Label>
-              <Input id="username" placeholder="Inserisci il tuo username" value={username} onChange={(e) => setUsername(e.target.value)} required />
+              <Label htmlFor="email">Email</Label>
+              {/* Aggiornato id, placeholder, type="email", value e onChange */}
+              <Input id="email" type="email" placeholder="Inserisci la tua email" value={email} onChange={(e) => setEmail(e.target.value)} required />
             </div>
             <div className="grid gap-2">
               <Label htmlFor="password">Password</Label>
