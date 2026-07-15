@@ -49,6 +49,9 @@ export default function Dashboard({ token, onLogout }) {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [idDaEliminare, setIdDaEliminare] = useState(null);
   const [viewMode, setViewMode] = useState("list");
+  
+  // STATO AGGIUNTO PER L'ERRORE DEL TITOLO MANCANTE
+  const [titoloError, setTitoloError] = useState("");
 
   useEffect(() => {
     if (token) {
@@ -72,7 +75,13 @@ export default function Dashboard({ token, onLogout }) {
 
   const gestisciInvio = (e) => {
     e.preventDefault();
-    if (!nuovoTesto.trim()) return;
+    setTitoloError(""); // Azzera l'errore precedente
+    
+    // Controllo se il campo è vuoto e mostro l'errore
+    if (!nuovoTesto.trim()) {
+      setTitoloError("Il titolo del film è obbligatorio.");
+      return; 
+    }
 
     const formData = new FormData();
     formData.append("testo", nuovoTesto);
@@ -161,7 +170,11 @@ export default function Dashboard({ token, onLogout }) {
               </p>
             </div>
 
-            <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
+            {/* Aggiunto l'azzeramento degli errori alla chiusura della modale */}
+            <Dialog open={isAddModalOpen} onOpenChange={(open) => {
+              setIsAddModalOpen(open);
+              if (!open) setTitoloError("");
+            }}>
               <DialogTrigger asChild>
                 <Button size="lg" className="shadow-sm">
                   <FaPlus className="mr-2 h-4 w-4" /> Aggiungi Film
@@ -177,13 +190,23 @@ export default function Dashboard({ token, onLogout }) {
                 <form
                   onSubmit={gestisciInvio}
                   className="flex flex-col gap-4 mt-4"
+                  noValidate /* DISABILITA IL POPUP DEL BROWSER */
                 >
-                  <Input
-                    value={nuovoTesto}
-                    onChange={(e) => setNuovoTesto(e.target.value)}
-                    placeholder="Titolo del film o serie..."
-                    autoFocus
-                  />
+                  <div className="flex flex-col gap-1.5">
+                    <Input
+                      value={nuovoTesto}
+                      onChange={(e) => {
+                        setNuovoTesto(e.target.value);
+                        setTitoloError(""); // Rimuove l'errore appena inizi a scrivere
+                      }}
+                      placeholder="Titolo del film o serie..."
+                      className={titoloError ? "border-destructive focus-visible:ring-destructive" : ""}
+                      autoFocus
+                    />
+                    {/* SCRITTA ROSSA DI ERRORE SOTTO L'INPUT */}
+                    {titoloError && <span className="text-xs font-semibold text-destructive">{titoloError}</span>}
+                  </div>
+                  
                   <Input
                     type="file"
                     accept="image/*"
