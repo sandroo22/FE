@@ -1,17 +1,20 @@
 import { useState, useEffect } from "react";
-// Aggiunte FaEye e FaEyeSlash per la grafica
 import {
   FaEdit,
   FaTrash,
   FaCheck,
   FaTimes,
-  FaPlus,
   FaList,
   FaThLarge,
   FaEye,
   FaEyeSlash,
+  FaInfoCircle,
 } from "react-icons/fa";
 import { Navbar } from "@/components/Navbar";
+
+// IMPORTIAMO I NOSTRI NUOVI COMPONENTI PULITI
+import { AddMovieModal } from "@/components/AddMovieModal";
+import { MovieDetailsModal } from "@/components/MovieDetailsModal";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,32 +30,25 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { Badge } from "@/components/ui/badge"; // Usiamo un badge per mostrare "Visto" sulle card
+import { Badge } from "@/components/ui/badge";
 
 export default function Dashboard({ token, onLogout }) {
   const [film, setFilm] = useState([]);
-  const [nuovoTesto, setNuovoTesto] = useState("");
-  const [fileCopertina, setFileCopertina] = useState(null);
 
+  // Stati per la modifica e l'eliminazione
   const [idInModifica, setIdInModifica] = useState(null);
   const [testoModificato, setTestoModificato] = useState("");
-
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false); // Modale eliminazione
   const [idDaEliminare, setIdDaEliminare] = useState(null);
-  const [viewMode, setViewMode] = useState("list");
-  
-  // STATO AGGIUNTO PER L'ERRORE DEL TITOLO MANCANTE
-  const [titoloError, setTitoloError] = useState("");
 
+  // Stato per la visualizzazione Lista/Griglia
+  const [viewMode, setViewMode] = useState("list");
+
+  // Stati per la Modale dei Dettagli (Attori)
+  const [isDettaglioOpen, setIsDettaglioOpen] = useState(false);
+  const [filmSelezionato, setFilmSelezionato] = useState(null);
+
+  // Scarica la lista dei film all'avvio
   useEffect(() => {
     if (token) {
       fetch("http://localhost:5000/api/film", {
@@ -73,36 +69,7 @@ export default function Dashboard({ token, onLogout }) {
     }
   }, [token]);
 
-  const gestisciInvio = (e) => {
-    e.preventDefault();
-    setTitoloError(""); // Azzera l'errore precedente
-    
-    // Controllo se il campo è vuoto e mostro l'errore
-    if (!nuovoTesto.trim()) {
-      setTitoloError("Il titolo del film è obbligatorio.");
-      return; 
-    }
-
-    const formData = new FormData();
-    formData.append("testo", nuovoTesto);
-    if (fileCopertina) {
-      formData.append("copertina", fileCopertina);
-    }
-
-    fetch("http://localhost:5000/api/film", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${token}` },
-      body: formData,
-    })
-      .then((res) => res.json())
-      .then((lista) => {
-        if (Array.isArray(lista)) setFilm(lista);
-        setNuovoTesto("");
-        setFileCopertina(null);
-        setIsAddModalOpen(false);
-      })
-      .catch(console.error);
-  };
+  // --- FUNZIONI API ---
 
   const salvaModifica = (id) => {
     fetch(`http://localhost:5000/api/film/${id}`, {
@@ -121,11 +88,8 @@ export default function Dashboard({ token, onLogout }) {
       .catch(console.error);
   };
 
-  // NUOVA FUNZIONE: Inverte lo stato visto/non visto
   const toggleVisto = (id, statoAttuale) => {
-    // Se è 1/true diventa false, se è 0/false diventa true
     const nuovoStato = !statoAttuale;
-
     fetch(`http://localhost:5000/api/film/${id}/visto`, {
       method: "PATCH",
       headers: {
@@ -154,78 +118,39 @@ export default function Dashboard({ token, onLogout }) {
       .catch(console.error);
   };
 
+  // Apre la modale dei dettagli passando il film cliccato (il fetch attori ora avviene dentro la modale!)
+  const apriDettagliFilm = (filmCliccato) => {
+    setFilmSelezionato(filmCliccato);
+    setIsDettaglioOpen(true);
+  };
+
   const filmList = Array.isArray(film) ? film : [];
 
   return (
     <div className="min-h-screen bg-muted/20 flex flex-col">
       <Navbar onLogout={onLogout} />
 
-      <main className="flex-1 p-6">
-        <div className="mx-auto max-w-5xl space-y-8">
+      <main className="flex-1 p-4 sm:p-6">
+        <div className="mx-auto max-w-5xl space-y-6 sm:space-y-8">
           <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4">
             <div>
-              <h1 className="text-3xl font-bold tracking-tight">I tuoi Film</h1>
-              <p className="text-muted-foreground mt-1">
+              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
+                I tuoi Film
+              </h1>
+              <p className="text-sm sm:text-base text-muted-foreground mt-1">
                 Gestisci e organizza la tua lista in modo semplice.
               </p>
             </div>
 
-            {/* Aggiunto l'azzeramento degli errori alla chiusura della modale */}
-            <Dialog open={isAddModalOpen} onOpenChange={(open) => {
-              setIsAddModalOpen(open);
-              if (!open) setTitoloError("");
-            }}>
-              <DialogTrigger asChild>
-                <Button size="lg" className="shadow-sm">
-                  <FaPlus className="mr-2 h-4 w-4" /> Aggiungi Film
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-[425px]">
-                <DialogHeader>
-                  <DialogTitle>Aggiungi alla lista</DialogTitle>
-                  <DialogDescription>
-                    Inserisci il titolo e carica una copertina dal tuo computer.
-                  </DialogDescription>
-                </DialogHeader>
-                <form
-                  onSubmit={gestisciInvio}
-                  className="flex flex-col gap-4 mt-4"
-                  noValidate /* DISABILITA IL POPUP DEL BROWSER */
-                >
-                  <div className="flex flex-col gap-1.5">
-                    <Input
-                      value={nuovoTesto}
-                      onChange={(e) => {
-                        setNuovoTesto(e.target.value);
-                        setTitoloError(""); // Rimuove l'errore appena inizi a scrivere
-                      }}
-                      placeholder="Titolo del film o serie..."
-                      className={titoloError ? "border-destructive focus-visible:ring-destructive" : ""}
-                      autoFocus
-                    />
-                    {/* SCRITTA ROSSA DI ERRORE SOTTO L'INPUT */}
-                    {titoloError && <span className="text-xs font-semibold text-destructive">{titoloError}</span>}
-                  </div>
-                  
-                  <Input
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => setFileCopertina(e.target.files[0])}
-                    className="cursor-pointer file:mr-4 file:py-1 file:px-3 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
-                  />
-                  <Button type="submit" className="w-full mt-2">
-                    Salva Film
-                  </Button>
-                </form>
-              </DialogContent>
-            </Dialog>
+            {/* COMPONENTE ESTRATTO: Si occupa lui di tutto il form e di inviarci la nuova lista */}
+            <AddMovieModal token={token} onFilmAdded={setFilm} />
           </div>
 
-          <div className="flex justify-end items-center mb-4">
+          <div className="flex justify-start sm:justify-end items-center mb-4">
             <Tabs
               value={viewMode}
               onValueChange={setViewMode}
-              className="w-[200px]"
+              className="w-full sm:w-[200px]"
             >
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="list">
@@ -248,30 +173,34 @@ export default function Dashboard({ token, onLogout }) {
                 {filmList.map((item) => (
                   <div
                     key={item.id}
-                    className="flex items-center justify-between p-4 hover:bg-muted/50 transition-colors"
+                    className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 hover:bg-muted/50 transition-colors"
                   >
                     {idInModifica === item.id ? (
-                      <div className="flex w-full items-center gap-3">
+                      <div className="flex flex-col sm:flex-row w-full items-center gap-3">
                         <Input
                           value={testoModificato}
                           onChange={(e) => setTestoModificato(e.target.value)}
                           className="flex-1 bg-background"
                           autoFocus
                         />
-                        <Button
-                          variant="default"
-                          size="sm"
-                          onClick={() => salvaModifica(item.id)}
-                        >
-                          <FaCheck className="mr-2 h-4 w-4" /> Salva
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setIdInModifica(null)}
-                        >
-                          <FaTimes className="h-4 w-4" />
-                        </Button>
+                        <div className="flex gap-2 w-full sm:w-auto">
+                          <Button
+                            variant="default"
+                            size="sm"
+                            className="flex-1"
+                            onClick={() => salvaModifica(item.id)}
+                          >
+                            <FaCheck className="mr-2 h-4 w-4" /> Salva
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="flex-1"
+                            onClick={() => setIdInModifica(null)}
+                          >
+                            <FaTimes className="mr-2 h-4 w-4" /> Annulla
+                          </Button>
+                        </div>
                       </div>
                     ) : (
                       <>
@@ -283,19 +212,27 @@ export default function Dashboard({ token, onLogout }) {
                               className="h-12 w-8 object-cover rounded-sm shadow-sm"
                             />
                           )}
-                          {/* Il titolo viene sbarrato se è stato visto! */}
                           <div
-                            className={`font-medium transition-all ${item.visto ? "text-muted-foreground line-through" : "text-foreground"}`}
+                            className={`font-medium transition-all line-clamp-2 ${item.visto ? "text-muted-foreground line-through" : "text-foreground"}`}
                           >
                             {item.testo}
                           </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                          {/* Bottone Visto/Non Visto */}
+                        <div className="flex items-center justify-end sm:justify-start gap-2 self-end sm:self-auto w-full sm:w-auto mt-2 sm:mt-0 pt-2 sm:pt-0 border-t sm:border-0">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="flex-1 sm:flex-none text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                            onClick={() => apriDettagliFilm(item)}
+                            title="Dettagli e Attori"
+                          >
+                            <FaInfoCircle className="sm:mr-0 h-4 w-4" />
+                          </Button>
+
                           <Button
                             variant={item.visto ? "default" : "outline"}
-                            size="icon"
-                            className={`h-8 w-8 ${item.visto ? "bg-green-600 hover:bg-green-700" : ""}`}
+                            size="sm"
+                            className={`flex-1 sm:flex-none ${item.visto ? "bg-green-600 hover:bg-green-700" : ""}`}
                             onClick={() => toggleVisto(item.id, item.visto)}
                             title={
                               item.visto
@@ -311,8 +248,8 @@ export default function Dashboard({ token, onLogout }) {
                           </Button>
                           <Button
                             variant="outline"
-                            size="icon"
-                            className="h-8 w-8"
+                            size="sm"
+                            className="flex-1 sm:flex-none"
                             onClick={() => {
                               setIdInModifica(item.id);
                               setTestoModificato(item.testo);
@@ -322,8 +259,8 @@ export default function Dashboard({ token, onLogout }) {
                           </Button>
                           <Button
                             variant="outline"
-                            size="icon"
-                            className="h-8 w-8 border-destructive/30 text-destructive hover:text-destructive hover:bg-destructive/10"
+                            size="sm"
+                            className="flex-1 sm:flex-none border-destructive/30 text-destructive hover:text-destructive hover:bg-destructive/10"
                             onClick={() => {
                               setIdDaEliminare(item.id);
                               setIsModalOpen(true);
@@ -339,19 +276,19 @@ export default function Dashboard({ token, onLogout }) {
               </div>
             </div>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 sm:gap-6">
               {filmList.map((item) => (
                 <Card
                   key={item.id}
                   className="overflow-hidden flex flex-col hover:shadow-md transition-shadow relative"
                 >
-                  {/* Badge visivo sulla copertina se è stato visto */}
                   {item.visto ? (
                     <Badge
                       className="absolute top-2 right-2 z-10 bg-green-600 hover:bg-green-700 cursor-pointer"
                       onClick={() => toggleVisto(item.id, item.visto)}
                     >
-                      <FaEye className="mr-1 h-3 w-3" /> Visto
+                      <FaEye className="mr-1 h-3 w-3" />{" "}
+                      <span className="hidden sm:inline">Visto</span>
                     </Badge>
                   ) : (
                     <Badge
@@ -359,7 +296,8 @@ export default function Dashboard({ token, onLogout }) {
                       className="absolute top-2 right-2 z-10 cursor-pointer opacity-80 hover:opacity-100"
                       onClick={() => toggleVisto(item.id, item.visto)}
                     >
-                      <FaEyeSlash className="mr-1 h-3 w-3" /> Da vedere
+                      <FaEyeSlash className="mr-1 h-3 w-3" />{" "}
+                      <span className="hidden sm:inline">Da vedere</span>
                     </Badge>
                   )}
 
@@ -412,11 +350,19 @@ export default function Dashboard({ token, onLogout }) {
                         >
                           {item.testo}
                         </h3>
-                        <div className="flex items-center justify-end gap-2 mt-4">
+                        <div className="flex items-center justify-between sm:justify-end gap-1 sm:gap-2 mt-4">
                           <Button
                             variant="outline"
                             size="icon"
-                            className="h-7 w-7"
+                            className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                            onClick={() => apriDettagliFilm(item)}
+                          >
+                            <FaInfoCircle className="h-3 w-3" />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            className="h-8 w-8"
                             onClick={() => {
                               setIdInModifica(item.id);
                               setTestoModificato(item.testo);
@@ -427,7 +373,7 @@ export default function Dashboard({ token, onLogout }) {
                           <Button
                             variant="outline"
                             size="icon"
-                            className="h-7 w-7 border-destructive/30 text-destructive hover:text-destructive hover:bg-destructive/10"
+                            className="h-8 w-8 border-destructive/30 text-destructive hover:text-destructive hover:bg-destructive/10"
                             onClick={() => {
                               setIdDaEliminare(item.id);
                               setIsModalOpen(true);
@@ -447,12 +393,12 @@ export default function Dashboard({ token, onLogout }) {
       </main>
 
       <AlertDialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <AlertDialogContent>
+        <AlertDialogContent className="w-[95vw] sm:w-full rounded-lg">
           <AlertDialogHeader>
             <AlertDialogTitle>Sei assolutamente sicuro?</AlertDialogTitle>
             <AlertDialogDescription>
               Questa azione non può essere annullata. Questo eliminerà
-              definitivamente il film dalla tua lista e dal nostro database.
+              definitivamente il film e i relativi attori dal nostro database.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -463,11 +409,19 @@ export default function Dashboard({ token, onLogout }) {
               onClick={handleConfermaElimina}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              Elimina Film
+              Elimina
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* COMPONENTE ESTRATTO: Modale dei Dettagli del Film */}
+      <MovieDetailsModal
+        token={token}
+        filmSelezionato={filmSelezionato}
+        isDettaglioOpen={isDettaglioOpen}
+        onClose={setIsDettaglioOpen}
+      />
     </div>
   );
 }

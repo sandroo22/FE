@@ -1,5 +1,6 @@
-import { Button } from "@/components/ui/button";
 import { FaSignOutAlt, FaFilm } from "react-icons/fa";
+// Importiamo buttonVariants per usare lo stile del bottone senza creare il tag HTML
+import { buttonVariants } from "@/components/ui/button";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -19,23 +20,28 @@ export function Navbar({ onLogout }) {
         <FaFilm className="text-primary" /> MyFilmTracker
       </div>
 
-      {/* Finestra di conferma per il Logout */}
       <AlertDialog>
-        <AlertDialogTrigger asChild>
-          <Button variant="outline" size="sm">
-            <FaSignOutAlt className="mr-2 h-4 w-4" /> Esci
-          </Button>
+        {/* Usiamo className={buttonVariants(...)} invece di asChild + <Button> */}
+        <AlertDialogTrigger
+          className={buttonVariants({ variant: "outline", size: "sm" })}
+        >
+          <FaSignOutAlt className="mr-2 h-4 w-4" /> Esci
         </AlertDialogTrigger>
-        <AlertDialogContent>
+
+        <AlertDialogContent className="w-[95vw] sm:w-full rounded-lg">
           <AlertDialogHeader>
             <AlertDialogTitle>Sei sicuro di voler uscire?</AlertDialogTitle>
             <AlertDialogDescription>
-              Dovrai effettuare nuovamente l'accesso per poter vedere o modificare la tua lista di film.
+              Dovrai effettuare nuovamente l'accesso per poter vedere o
+              modificare la tua lista di film.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Annulla</AlertDialogCancel>
-            <AlertDialogAction onClick={onLogout} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+            <AlertDialogAction
+              onClick={onLogout}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
               Sì, Esci
             </AlertDialogAction>
           </AlertDialogFooter>
