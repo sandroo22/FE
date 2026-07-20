@@ -40,7 +40,7 @@ export function AddMovieModal({ token, onFilmAdded }) {
         onFilmAdded(listaAggiornata); // Invia la nuova lista alla Dashboard
         setNuovoTesto("");
         setFileCopertina(null);
-        setIsAddModalOpen(false); // Chiude il pop-up
+        setIsAddModalOpen(false); 
       })
       .catch(console.error);
   };

@@ -19,7 +19,6 @@ export function Navbar({ onLogout }) {
       {/* Logo Cinematografico Modificato */}
       <div className="flex items-center gap-2 text-xl sm:text-2xl font-black tracking-tighter text-white uppercase">
         <FaFilm className="text-primary drop-shadow-[0_0_8px_rgba(220,38,38,0.8)]" /> 
-        {/* QUI ABBIAMO CAMBIATO IL TITOLO */}
         <span>PIATTAFORMA <span className="text-primary">FILM/SERIE</span></span>
       </div>
 
