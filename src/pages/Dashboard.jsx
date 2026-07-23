@@ -10,6 +10,8 @@ import {
   FaEyeSlash,
   FaInfoCircle,
   FaSearch,
+  FaStar,
+  FaRegStar,
 } from "react-icons/fa";
 import { Navbar } from "@/components/Navbar";
 import { AddMovieModal } from "@/components/AddMovieModal";
@@ -42,11 +44,7 @@ export default function Dashboard({ token, onLogout }) {
   const [isDettaglioOpen, setIsDettaglioOpen] = useState(false);
   const [filmSelezionato, setFilmSelezionato] = useState(null);
 
-  // LEGGERE I FILTRI DALL'URL AL CARICAMENTO
-  // Prendiamo i parametri attuali dall'URL (se ci sono)
   const searchParams = new URLSearchParams(window.location.search);
-
-  // Inizializziamo gli stati dando priorità all'URL, altrimenti usiamo il valore di default
   const [searchQuery, setSearchQuery] = useState(
     searchParams.get("search") || "",
   );
@@ -58,33 +56,20 @@ export default function Dashboard({ token, onLogout }) {
   );
   const [viewMode, setViewMode] = useState(searchParams.get("view") || "list");
 
-  //  AGGIORNARE L'URL IN TEMPO REALE 
-  // Questo useEffect "osserva" i filtri. Ogni volta che ne cambi uno, lo scrive nell'URL.
   useEffect(() => {
     const currentUrl = new URL(window.location.href);
-
-    // Aggiungiamo o rimuoviamo il parametro di ricerca
     if (searchQuery) currentUrl.searchParams.set("search", searchQuery);
     else currentUrl.searchParams.delete("search");
-
-    // Aggiungiamo o rimuoviamo lo stato (Visto/Da Vedere)
     if (filterStatus !== "all")
       currentUrl.searchParams.set("status", filterStatus);
     else currentUrl.searchParams.delete("status");
-
-    // Aggiungiamo o rimuoviamo l'ordinamento
     if (sortOrder !== "default") currentUrl.searchParams.set("sort", sortOrder);
     else currentUrl.searchParams.delete("sort");
-
-    // Aggiungiamo o rimuoviamo la vista Lista/Griglia
     if (viewMode !== "list") currentUrl.searchParams.set("view", viewMode);
     else currentUrl.searchParams.delete("view");
-
-    // Usiamo replaceState per non intasare la cronologia del tasto "Indietro" del browser
     window.history.replaceState({}, "", currentUrl);
   }, [searchQuery, filterStatus, sortOrder, viewMode]);
 
-  // Scaricamento dei film all'avvio
   useEffect(() => {
     if (token) {
       fetch("http://localhost:5000/api/film", {
@@ -98,14 +83,10 @@ export default function Dashboard({ token, onLogout }) {
           if (Array.isArray(dati)) setFilm(dati);
           else setFilm([]);
         })
-        .catch((err) => {
-          console.error("Errore nel caricamento:", err);
-          setFilm([]);
-        });
+        .catch(console.error);
     }
   }, [token]);
 
-  // Funzioni API (Modifica, Visto, Elimina)
   const salvaModifica = (id) => {
     fetch(`http://localhost:5000/api/film/${id}`, {
       method: "PUT",
@@ -140,6 +121,23 @@ export default function Dashboard({ token, onLogout }) {
       .catch(console.error);
   };
 
+  //  Aggiorna il voto in tempo reale
+  const cambiaVoto = (id, nuovoVoto) => {
+    fetch(`http://localhost:5000/api/film/${id}/rating`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ rating: nuovoVoto }),
+    })
+      .then((res) => res.json())
+      .then((lista) => {
+        if (Array.isArray(lista)) setFilm(lista);
+      })
+      .catch(console.error);
+  };
+
   const handleConfermaElimina = () => {
     fetch(`http://localhost:5000/api/film/${idDaEliminare}`, {
       method: "DELETE",
@@ -158,18 +156,40 @@ export default function Dashboard({ token, onLogout }) {
     setIsDettaglioOpen(true);
   };
 
-  // MOTORE DI RICERCA COMBINATO
+  // COMPONENTE STELLINE (Disegna le 5 stelle e gestisce il click)
+  const renderStars = (filmId, currentRating) => {
+    return (
+      <div className="flex gap-1 mt-1">
+        {[1, 2, 3, 4, 5].map((star) => (
+          <span
+            key={star}
+            className="cursor-pointer text-yellow-500 hover:scale-125 transition-transform"
+            // Se clicchi la stella che hai già selezionato, il voto si azzera
+            onClick={() =>
+              cambiaVoto(filmId, star === currentRating ? 0 : star)
+            }
+            title={`Vota ${star} stell${star === 1 ? "a" : "e"}`}
+          >
+            {star <= (currentRating || 0) ? (
+              <FaStar className="h-3 w-3 sm:h-4 sm:w-4 drop-shadow-sm" />
+            ) : (
+              <FaRegStar className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground/40" />
+            )}
+          </span>
+        ))}
+      </div>
+    );
+  };
+
   const filmList = Array.isArray(film) ? film : [];
   const filteredFilms = filmList
     .filter((item) => {
       const matchesSearch = item.testo
         .toLowerCase()
         .includes(searchQuery.toLowerCase());
-
       let matchesStatus = true;
       if (filterStatus === "watched") matchesStatus = item.visto;
       if (filterStatus === "unwatched") matchesStatus = !item.visto;
-
       return matchesSearch && matchesStatus;
     })
     .sort((a, b) => {
@@ -298,10 +318,14 @@ export default function Dashboard({ token, onLogout }) {
                               className="h-12 w-8 object-cover rounded-sm shadow-sm"
                             />
                           )}
-                          <div
-                            className={`font-medium transition-all line-clamp-2 ${item.visto ? "text-muted-foreground line-through" : "text-foreground"}`}
-                          >
-                            {item.testo}
+                          <div className="flex flex-col">
+                            <div
+                              className={`font-medium transition-all line-clamp-2 ${item.visto ? "text-muted-foreground line-through" : "text-foreground"}`}
+                            >
+                              {item.testo}
+                            </div>
+                            {/* MOSTRA STELLINE IN LISTA */}
+                            {renderStars(item.id, item.rating)}
                           </div>
                         </div>
                         <div className="flex items-center justify-end sm:justify-start gap-2 self-end sm:self-auto w-full sm:w-auto mt-2 sm:mt-0 pt-2 sm:pt-0 border-t sm:border-0">
@@ -429,13 +453,18 @@ export default function Dashboard({ token, onLogout }) {
                       </div>
                     ) : (
                       <>
-                        <h3
-                          className={`font-semibold text-sm line-clamp-2 mt-2 ${item.visto ? "text-muted-foreground line-through" : ""}`}
-                          title={item.testo}
-                        >
-                          {item.testo}
-                        </h3>
-                        <div className="flex items-center justify-between sm:justify-end gap-1 sm:gap-2 mt-4">
+                        <div className="flex flex-col mb-4">
+                          <h3
+                            className={`font-semibold text-sm line-clamp-2 mt-2 ${item.visto ? "text-muted-foreground line-through" : ""}`}
+                            title={item.testo}
+                          >
+                            {item.testo}
+                          </h3>
+                          {/* MOSTRA STELLINE IN GRIGLIA */}
+                          {renderStars(item.id, item.rating)}
+                        </div>
+
+                        <div className="flex items-center justify-between sm:justify-end gap-1 sm:gap-2 mt-auto">
                           <Button
                             variant="outline"
                             size="icon"
