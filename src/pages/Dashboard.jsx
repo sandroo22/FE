@@ -13,7 +13,7 @@ import {
   FaStar,
   FaRegStar,
 } from "react-icons/fa";
-import { Navbar } from "@/components/Navbar";
+import { Navbar } from "@/components/navbar";
 import { AddMovieModal } from "@/components/AddMovieModal";
 import { MovieDetailsModal } from "@/components/MovieDetailsModal";
 
