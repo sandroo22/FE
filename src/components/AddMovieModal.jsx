@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { FaPlus, FaSearch, FaMagic, FaArrowLeft } from "react-icons/fa";
+import { useState, useEffect } from "react";
+import { FaPlus, FaSearch, FaMagic, FaArrowLeft, FaFolder } from "react-icons/fa";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -23,10 +23,35 @@ export function AddMovieModal({ token, onFilmAdded }) {
   const [error, setError] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
 
-  //  NUOVA CHIAVE TMDB
+  //  STATI PER LE CARTELLE 
+  const [liste, setListe] = useState([]);
+  const [selectedLista, setSelectedLista] = useState("");
+
   const API_KEY = "f54f39b5310035478bd10b4d1487458b";
 
-  //  RICERCA MULTIPLA CON TMDB (Titoli e locandine in Italiano)
+  //  EFFETTO PER SCARICARE LE CARTELLE ALL'APERTURA DELLA MODALE 
+  useEffect(() => {
+    if (isOpen && token) {
+      fetch("http://localhost:5000/api/liste", {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+        .then((res) => res.json())
+        .then((data) => {
+          if (Array.isArray(data)) {
+            setListe(data);
+            // Cerca la lista di default (Generale) e impostala come selezionata iniziale
+            const defaultList = data.find((l) => l.is_default);
+            if (defaultList) {
+              setSelectedLista(defaultList.id);
+            } else if (data.length > 0) {
+              setSelectedLista(data[0].id);
+            }
+          }
+        })
+        .catch(console.error);
+    }
+  }, [isOpen, token]);
+
   const searchMovie = async (e) => {
     e.preventDefault();
     if (!searchQuery) return;
@@ -54,28 +79,23 @@ export function AddMovieModal({ token, onFilmAdded }) {
     }
   };
 
-  //  RECUPERO DETTAGLI AVANZATI (Cast e Ruoli!)
   const selectMovie = async (tmdbID) => {
     setIsFetchingDetails(true);
     setError(null);
     try {
-      // Usiamo append_to_response per scaricare Film + Attori in un colpo solo
       const response = await fetch(
         `https://api.themoviedb.org/3/movie/${tmdbID}?append_to_response=credits&api_key=${API_KEY}&language=it-IT`,
       );
       const data = await response.json();
 
       if (data.id) {
-        // Estraiamo solo i primi 8 attori per non intasare il database
         const topCast = data.credits?.cast?.slice(0, 8) || [];
 
         setMoviePreview({
           title: data.title,
-          // TMDb fornisce solo la fine del link dell'immagine, dobbiamo aggiungere la prima parte:
           poster: data.poster_path
             ? `https://image.tmdb.org/t/p/w500${data.poster_path}`
             : "",
-          // Creiamo un oggetto per ogni attore con Nome e Ruolo!
           actors: topCast.map((actor) => ({
             name: actor.name,
             role: actor.character || "Sconosciuto",
@@ -93,7 +113,7 @@ export function AddMovieModal({ token, onFilmAdded }) {
     }
   };
 
-  // SALVATAGGIO NEL NOSTRO DATABASE (Ora passiamo anche il ruolo!)
+  //  CHIAMATA POST PER INVIARE LA CARTELLA (lista_id)
   const handleSaveToMyList = async () => {
     if (!moviePreview) return;
     setIsSaving(true);
@@ -108,6 +128,7 @@ export function AddMovieModal({ token, onFilmAdded }) {
         body: JSON.stringify({
           testo: moviePreview.title,
           copertina: moviePreview.poster,
+          lista_id: selectedLista || null // Invia l'ID della cartella selezionata
         }),
       });
 
@@ -117,7 +138,6 @@ export function AddMovieModal({ token, onFilmAdded }) {
 
       if (moviePreview.actors.length > 0 && nuovoFilm) {
         for (const attore of moviePreview.actors) {
-          // Guarda qui: ora mandiamo sia "nome_cognome" che "ruolo"!
           await fetch(`http://localhost:5000/api/film/${nuovoFilm.id}/attori`, {
             method: "POST",
             headers: {
@@ -275,7 +295,7 @@ export function AddMovieModal({ token, onFilmAdded }) {
                 </span>
               </h3>
 
-              <div className="text-sm text-zinc-400 mb-6 max-w-[400px] text-left w-full mt-2 space-y-1 h-32 overflow-y-auto custom-scrollbar">
+              <div className="text-sm text-zinc-400 mb-4 max-w-[400px] text-left w-full mt-2 space-y-1 h-32 overflow-y-auto custom-scrollbar">
                 <span className="font-semibold text-zinc-300 block mb-2 text-center">
                   Cast Principale:
                 </span>
@@ -292,6 +312,24 @@ export function AddMovieModal({ token, onFilmAdded }) {
                     </span>
                   </div>
                 ))}
+              </div>
+
+              {/* --- MENU A TENDINA PER LA SELEZIONE DELLA CARTELLA --- */}
+              <div className="w-full flex flex-col text-left mb-6 bg-zinc-900 p-3 rounded-md border border-white/5 shadow-inner">
+                <label className="text-xs text-zinc-400 mb-2 uppercase tracking-wider font-semibold flex items-center gap-2">
+                  <FaFolder className="h-3 w-3" /> Salva in cartella:
+                </label>
+                <select
+                  value={selectedLista}
+                  onChange={(e) => setSelectedLista(e.target.value)}
+                  className="w-full bg-zinc-950 border border-white/20 rounded-md p-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer"
+                >
+                  {liste.map((lista) => (
+                    <option key={lista.id} value={lista.id}>
+                      {lista.nome}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div className="flex w-full gap-2 mt-auto">
