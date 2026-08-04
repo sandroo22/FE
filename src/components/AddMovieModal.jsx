@@ -1,5 +1,11 @@
 import { useState, useEffect } from "react";
-import { FaPlus, FaSearch, FaMagic, FaArrowLeft, FaFolder } from "react-icons/fa";
+import {
+  FaPlus,
+  FaSearch,
+  FaMagic,
+  FaArrowLeft,
+  FaFolder,
+} from "react-icons/fa";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -23,13 +29,13 @@ export function AddMovieModal({ token, onFilmAdded }) {
   const [error, setError] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
 
-  //  STATI PER LE CARTELLE 
+  //  STATI PER LE CARTELLE
   const [liste, setListe] = useState([]);
   const [selectedLista, setSelectedLista] = useState("");
 
   const API_KEY = "f54f39b5310035478bd10b4d1487458b";
 
-  //  EFFETTO PER SCARICARE LE CARTELLE ALL'APERTURA DELLA MODALE 
+  //  EFFETTO PER SCARICARE LE CARTELLE ALL'APERTURA DELLA MODALE
   useEffect(() => {
     if (isOpen && token) {
       fetch("http://localhost:5000/api/liste", {
@@ -128,7 +134,7 @@ export function AddMovieModal({ token, onFilmAdded }) {
         body: JSON.stringify({
           testo: moviePreview.title,
           copertina: moviePreview.poster,
-          lista_id: selectedLista || null // Invia l'ID della cartella selezionata
+          lista_id: selectedLista || null, // Invia l'ID della cartella selezionata
         }),
       });
 
